@@ -114,7 +114,30 @@ DisassembleWindow::DisassembleWindow(QWidget *parent, DisassembleWidget* widget)
     m_runUntilCursor = new QAction(KIcon("debug-run-cursor"), i18n("&Run to Cursor"), this);
     m_runUntilCursor->setWhatsThis(i18n("Continues execution until the cursor position is reached."));
     connect(m_runUntilCursor,SIGNAL(triggered()), widget, SLOT(runToCursor()));
+
+    m_disassemblyFlavorAtt = new QAction(i18n("&AT&T"), this);
+    m_disassemblyFlavorAtt->setWhatsThis(i18n("GDB will use the AT&T disassembly style (e.g. mov 0xc(%ebp),%eax)."));
+    m_disassemblyFlavorAtt->setData(QString("att"));
+    m_disassemblyFlavorAtt->setCheckable(true);
+
+    m_disassemblyFlavorIntel = new QAction(i18n("&Intel"), this);
+    m_disassemblyFlavorIntel->setWhatsThis(i18n("GDB will use the Intel disassembly style (e.g. mov eax, DWORD PTR [ebp+0xc])."));
+    m_disassemblyFlavorIntel->setData(QString("intel"));
+    m_disassemblyFlavorIntel->setCheckable(true);
+
+    m_disassemblyFlavorActionGroup = new QActionGroup(this);
+    m_disassemblyFlavorActionGroup->setExclusive(true);
+    m_disassemblyFlavorActionGroup->addAction(m_disassemblyFlavorAtt);
+    m_disassemblyFlavorActionGroup->addAction(m_disassemblyFlavorIntel);
+
+    connect(m_disassemblyFlavorActionGroup,SIGNAL(triggered(QAction*)), widget, SLOT(setDisassemblyFlavor(QAction*)));
     }
+}
+
+void DisassembleWindow::setDisassemblyFlavor(bool att)
+{
+    m_disassemblyFlavorAtt->setChecked(att);
+    m_disassemblyFlavorIntel->setChecked(!att);
 }
 
 void DisassembleWindow::contextMenuEvent(QContextMenuEvent *e)
@@ -123,6 +146,9 @@ void DisassembleWindow::contextMenuEvent(QContextMenuEvent *e)
         popup.addAction(m_selectAddrAction);
         popup.addAction(m_jumpToLocation);
         popup.addAction(m_runUntilCursor);
+        QMenu * disassemblyFlavorMenu = popup.addMenu(i18n("Disassembly flavor"));
+        disassemblyFlavorMenu->addAction(m_disassemblyFlavorAtt);
+        disassemblyFlavorMenu->addAction(m_disassemblyFlavorIntel);
         popup.exec(e->globalPos());
 }
 /***************************************************************************/
@@ -284,6 +310,7 @@ void DisassembleWidget::slotActivate(bool activate)
         active_ = activate;
         if (active_)
         {
+            updateDisassemblyFlavor();
             m_registersManager->updateRegisters();
             if (!displayCurrent())
                 disassembleMemoryRegion();
@@ -437,6 +464,49 @@ void DisassembleWidget::update(const QString &address)
     }
     m_registersManager->updateRegisters();
 }
+
+void DisassembleWidget::setDisassemblyFlavor(QAction * action)
+{
+    DebugSession *s = qobject_cast<DebugSession*>(KDevelop::ICore::
+            self()->debugController()->currentSession());
+    if(!s || !s->isRunning()) return;
+
+    QString disassemblyFlavor = action->data().toString();
+    kDebug(9012) << "Disassemble widget set disassembly flavor" << disassemblyFlavor;
+
+    QString cmd = QString("disassembly-flavor %1").arg(disassemblyFlavor);
+    s->addCommandToFront(
+                new GDBCommand(GdbSet, cmd, this, &DisassembleWidget::setDisassemblyFlavorHandler ) );
+}
+
+void DisassembleWidget::setDisassemblyFlavorHandler(const GDBMI::ResultRecord& r)
+{
+    if (active_)
+    {
+        disassembleMemoryRegion();
+    }
+}
+
+void DisassembleWidget::updateDisassemblyFlavor()
+{
+    DebugSession *s = qobject_cast<DebugSession*>(KDevelop::ICore::
+            self()->debugController()->currentSession());
+    if(!s || !s->isRunning()) return;
+
+    s->addCommandToFront(
+                new GDBCommand(GdbShow, "disassembly-flavor", this, &DisassembleWidget::showDisassemblyFlavorHandler ) );
+}
+
+void DisassembleWidget::showDisassemblyFlavorHandler(const GDBMI::ResultRecord& r)
+{
+    const GDBMI::Value& value = r["value"];
+    QString disassemblyFlavor = value.literal();
+    kDebug(9012) << "Disassemble widget disassembly flavor" << disassemblyFlavor;
+
+    bool isAtt = (disassemblyFlavor.compare("att") == 0);
+    m_disassembleWindow->setDisassemblyFlavor(isAtt);
+}
+
 
 }
 

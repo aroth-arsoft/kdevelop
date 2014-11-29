@@ -80,6 +80,8 @@ class DisassembleWindow : public QTreeWidget
 public:
     DisassembleWindow(QWidget *parent, DisassembleWidget* widget);
 
+    void setDisassemblyFlavor(bool att);
+
 protected:
    virtual void contextMenuEvent(QContextMenuEvent *e);
 
@@ -87,6 +89,9 @@ private:
     QAction* m_selectAddrAction;
     QAction* m_jumpToLocation;
     QAction* m_runUntilCursor;
+    QAction* m_disassemblyFlavorAtt;
+    QAction* m_disassemblyFlavorIntel;
+    QActionGroup* m_disassemblyFlavorActionGroup;
 };
 
 class Breakpoint;
@@ -125,6 +130,7 @@ private Q_SLOTS:
     void currentSessionChanged(KDevelop::IDebugSession* session);
     void jumpToCursor();
     void runToCursor();
+    void setDisassemblyFlavor(QAction * action);
 
 protected:
     virtual void showEvent(QShowEvent*);
@@ -133,6 +139,7 @@ protected:
 
 private:
     bool displayCurrent();
+    void updateDisassemblyFlavor();
     
     /// Disassembles memory region from..to
     /// if from is empty current execution position is used
@@ -143,6 +150,8 @@ private:
     /// callbacks for GDBCommands
     void disassembleMemoryHandler(const GDBMI::ResultRecord& r);
     void updateExecutionAddressHandler(const GDBMI::ResultRecord& r);
+    void setDisassemblyFlavorHandler(const GDBMI::ResultRecord& r);
+    void showDisassemblyFlavorHandler(const GDBMI::ResultRecord& r);
 
     //for str to uint conversion.
     bool ok;
