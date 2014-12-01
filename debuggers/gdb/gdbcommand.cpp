@@ -14,6 +14,7 @@
  ***************************************************************************/
 
 #include "gdbcommand.h"
+#include <QtCore/QDateTime>
 
 using namespace GDBMI;
 
@@ -22,19 +23,22 @@ namespace GDBDebugger
 
 GDBCommand::GDBCommand(GDBMI::CommandType type, const QString &command)
 : type_(type), command_(command), handler_method(0), commandHandler_(0),
-  run(false), stateReloading_(false), handlesError_(false), m_thread(-1), m_frame(-1)
+  run(false), stateReloading_(false), handlesError_(false), m_thread(-1), m_frame(-1),
+  enqueueTime_(0), submitTime_(0), completeTime_(0)
 {
 }
 
 GDBCommand::GDBCommand(GDBMI::CommandType type, int index)
 : type_(type), command_(QString::number(index)), handler_method(0), commandHandler_(0),
-  run(false), stateReloading_(false), handlesError_(false), m_thread(-1), m_frame(-1)
+  run(false), stateReloading_(false), handlesError_(false), m_thread(-1), m_frame(-1),
+  enqueueTime_(0), submitTime_(0), completeTime_(0)
 {
 }
 
 GDBCommand::GDBCommand(CommandType type, const QString& arguments, GDBCommandHandler* handler)
 : type_(type), command_(arguments), handler_method(0), commandHandler_(handler),
-  run(false), stateReloading_(false), m_thread(-1), m_frame(-1)
+  run(false), stateReloading_(false), m_thread(-1), m_frame(-1),
+  enqueueTime_(0), submitTime_(0), completeTime_(0)
 {
     handlesError_ = handler->handlesError();
 }
@@ -607,5 +611,34 @@ bool GDBCommand::stateReloading() const
     return stateReloading_;
 }
 
+void GDBCommand::enqueued()
+{
+    enqueueTime_ = QDateTime::currentMSecsSinceEpoch();
+}
+
+void GDBCommand::submitted()
+{
+    submitTime_ = QDateTime::currentMSecsSinceEpoch();
+}
+
+void GDBCommand::completed()
+{
+    completeTime_ = QDateTime::currentMSecsSinceEpoch();
+}
+
+qint64 GDBCommand::gdbProcessingTime() const
+{
+    return completeTime_ - submitTime_;
+}
+
+qint64 GDBCommand::queueTime() const
+{
+    return submitTime_ - enqueueTime_;
+}
+
+qint64 GDBCommand::totalProcessingTime() const
+{
+    return completeTime_ - enqueueTime_;
+}
 
 }

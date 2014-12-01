@@ -148,6 +148,26 @@ public:
 
     bool stateReloading() const;
 
+    // Called when the command has been enqueued in the debug session
+    // and the command is wait for being submitted to GDB.
+    void enqueued();
+
+    // Called when the command has been submitted to GDB and the command
+    // waits for completion by GDB.
+    void submitted();
+
+    // Called when the command has been completed and the response has arrived.
+    void completed();
+
+    // returns the amount of time passed between submission and completion.
+    qint64 gdbProcessingTime() const;
+
+    // returns the amount of time passed between enqueuing and submission.
+    qint64 queueTime() const;
+
+    // returns the amount of time passed between enqueuing and completion.
+    qint64 totalProcessingTime() const;
+
 private:
     GDBMI::CommandType type_;
     QString command_;
@@ -166,6 +186,9 @@ protected: // FIXME: should be private, after I kill the first ctor
 private:
     int m_thread;
     int m_frame;
+    qint64 enqueueTime_;
+    qint64 submitTime_;
+    qint64 completeTime_;
 };
 
 class UserCommand : public GDBCommand
