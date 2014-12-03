@@ -47,6 +47,7 @@ public:
 private:
     void rationalizeQueue(GDBCommand* command);
     void removeVariableUpdates();
+    void removeStackListUpdates();
   
     QList<GDBCommand*> m_commandList;
 };

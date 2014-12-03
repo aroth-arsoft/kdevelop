@@ -57,9 +57,12 @@ void GDBDebugger::CommandQueue::enqueue(GDBCommand * command, QueuePosition inse
 
 void CommandQueue::rationalizeQueue(GDBCommand * command)
 {
-    if (command->type() >= ExecAbort && command->type() <= ExecUntil)
+    if (command->type() >= ExecAbort && command->type() <= ExecUntil) {
       // Changing execution location, abort any variable updates
       removeVariableUpdates();
+      // ... and stack list updates
+      removeStackListUpdates();
+    }
 }
 
 void GDBDebugger::CommandQueue::removeVariableUpdates()
@@ -69,6 +72,17 @@ void GDBDebugger::CommandQueue::removeVariableUpdates()
     while (it.hasNext()) {
         CommandType type = it.next()->type();
         if ((type >= VarEvaluateExpression && type <= VarListChildren) || type == VarUpdate)
+            it.remove();
+    }
+}
+
+void GDBDebugger::CommandQueue::removeStackListUpdates()
+{
+    QMutableListIterator<GDBCommand*> it = m_commandList;
+
+    while (it.hasNext()) {
+        CommandType type = it.next()->type();
+        if ((type >= StackListArguments && type <= VarListChildren) || type == StackListLocals)
             it.remove();
     }
 }
