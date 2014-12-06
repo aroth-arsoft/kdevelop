@@ -14,6 +14,7 @@
 // *   (at your option) any later version.                                  *
 // *                                                                        *
 // **************************************************************************
+#include <kdebug.h>
 
 #include "gdbcommandqueue.h"
 
@@ -53,6 +54,17 @@ void GDBDebugger::CommandQueue::enqueue(GDBCommand * command, QueuePosition inse
     }
 
     rationalizeQueue(command);
+    dumpQueue();
+}
+
+void CommandQueue::dumpQueue()
+{
+    kDebug(9012) << "Pending commands" << m_commandList.count();
+    unsigned commandNum = 0;
+    foreach(const GDBCommand* command, m_commandList) {
+        kDebug(9012) << "Command" << commandNum << command->initialString();
+        ++commandNum;
+    }
 }
 
 void CommandQueue::rationalizeQueue(GDBCommand * command)
@@ -82,7 +94,7 @@ void GDBDebugger::CommandQueue::removeStackListUpdates()
 
     while (it.hasNext()) {
         CommandType type = it.next()->type();
-        if ((type >= StackListArguments && type <= VarListChildren) || type == StackListLocals)
+        if (type >= StackListArguments && type <= StackListLocals)
             it.remove();
     }
 }
