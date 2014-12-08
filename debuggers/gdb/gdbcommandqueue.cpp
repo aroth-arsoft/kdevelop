@@ -75,6 +75,25 @@ void CommandQueue::rationalizeQueue(GDBCommand * command)
       // ... and stack list updates
       removeStackListUpdates();
     }
+    else if (command->type() >= StackListArguments && command->type() <= StackListLocals) {
+    }
+    removeDuplicates(command);
+}
+
+void GDBDebugger::CommandQueue::removeDuplicates(GDBCommand* command)
+{
+    QMutableListIterator<GDBCommand*> it = m_commandList;
+
+    while (it.hasNext()) {
+        GDBCommand* currentCmd = it.next();
+        CommandType type = currentCmd->type();
+        if (command != currentCmd && type == command->type() && command->initialString() == currentCmd->initialString()) {
+            if( (command->frame() == -1 || command->frame() == currentCmd->frame()) &&
+                (command->thread() == -1 || command->thread() == currentCmd->thread()) ) {
+                it.remove();
+            }
+        }
+    }
 }
 
 void GDBDebugger::CommandQueue::removeVariableUpdates()
