@@ -46,6 +46,7 @@ public:
 
 private:
     void rationalizeQueue(GDBCommand* command);
+    void removeObsoleteExecCommands(GDBCommand* command);
     void removeVariableUpdates();
     void removeStackListUpdates();
     void removeDuplicates(GDBCommand* command);
