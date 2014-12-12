@@ -75,12 +75,18 @@ private:
 
 class DisassembleWidget;
 
+enum DisassemblyFlavor {
+    DisassemblyFlavorUnknown = -1,
+    DisassemblyFlavorATT = 0,
+    DisassemblyFlavorIntel,
+};
+
 class DisassembleWindow : public QTreeWidget
 {
 public:
     DisassembleWindow(QWidget *parent, DisassembleWidget* widget);
 
-    void setDisassemblyFlavor(bool att);
+    void setDisassemblyFlavor(DisassemblyFlavor flavor);
 
 protected:
    virtual void contextMenuEvent(QContextMenuEvent *e);
