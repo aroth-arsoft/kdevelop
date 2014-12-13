@@ -78,8 +78,6 @@ void CommandQueue::rationalizeQueue(GDBCommand * command)
       // ... and stack list updates
       removeStackListUpdates();
     }
-    else if (command->type() >= StackListArguments && command->type() <= StackListLocals) {
-    }
     removeDuplicates(command);
 }
 
@@ -108,6 +106,7 @@ void GDBDebugger::CommandQueue::removeDuplicates(GDBCommand* command)
             if( (command->frame() == -1 || command->frame() == currentCmd->frame()) &&
                 (command->thread() == -1 || command->thread() == currentCmd->thread()) ) {
                 it.remove();
+                delete currentCmd;
             }
         }
     }
@@ -118,9 +117,12 @@ void GDBDebugger::CommandQueue::removeVariableUpdates()
     QMutableListIterator<GDBCommand*> it = m_commandList;
 
     while (it.hasNext()) {
-        CommandType type = it.next()->type();
-        if ((type >= VarEvaluateExpression && type <= VarListChildren) || type == VarUpdate)
+        GDBCommand* command = it.next();
+        CommandType type = command->type();
+        if ((type >= VarEvaluateExpression && type <= VarListChildren) || type == VarUpdate) {
             it.remove();
+            delete command;
+        }
     }
 }
 
@@ -129,9 +131,12 @@ void GDBDebugger::CommandQueue::removeStackListUpdates()
     QMutableListIterator<GDBCommand*> it = m_commandList;
 
     while (it.hasNext()) {
-        CommandType type = it.next()->type();
-        if (type >= StackListArguments && type <= StackListLocals)
+        GDBCommand* command = it.next();
+        CommandType type = command->type();
+        if (type >= StackListArguments && type <= StackListLocals) {
             it.remove();
+            delete command;
+        }
     }
 }
 
