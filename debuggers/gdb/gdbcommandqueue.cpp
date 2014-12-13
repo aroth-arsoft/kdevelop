@@ -52,6 +52,8 @@ void GDBDebugger::CommandQueue::enqueue(GDBCommand * command, QueuePosition inse
             m_commandList.insert(i, command);
         }
     }
+    // take the time when this command was added to the command queue
+    command->enqueued();
 
     rationalizeQueue(command);
     dumpQueue();

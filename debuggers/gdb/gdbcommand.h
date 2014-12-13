@@ -159,13 +159,13 @@ public:
     // Called when the command has been completed and the response has arrived.
     void completed();
 
-    // returns the amount of time passed between submission and completion.
+    // returns the amount of time (in ms) passed between submission and completion.
     qint64 gdbProcessingTime() const;
 
-    // returns the amount of time passed between enqueuing and submission.
+    // returns the amount of time (in ms) passed between enqueuing and submission.
     qint64 queueTime() const;
 
-    // returns the amount of time passed between enqueuing and completion.
+    // returns the amount of time (in ms) passed between enqueuing and completion.
     qint64 totalProcessingTime() const;
 
 private:
@@ -186,9 +186,13 @@ protected: // FIXME: should be private, after I kill the first ctor
 private:
     int m_thread;
     int m_frame;
-    qint64 enqueueTime_;
-    qint64 submitTime_;
-    qint64 completeTime_;
+    // remember the timestamps (in ms since start of the epoch) when this command
+    // - was added to the command queue (enqueued)
+    // - was submitted to GDB
+    // - was completed; response from GDB arrived
+    qint64 enqueueTimestamp_;
+    qint64 submitTimestamp_;
+    qint64 completeTimestamp_;
 };
 
 class UserCommand : public GDBCommand

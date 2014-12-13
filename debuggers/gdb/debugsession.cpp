@@ -555,7 +555,6 @@ void DebugSession::queueCmd(GDBCommand *cmd, QueuePosition queue_where)
         cmd->setStateReloading(true);
 
     commandQueue_->enqueue(cmd, queue_where);
-    cmd->enqueued();
 
     kDebug(9012) << "QUEUE: " << cmd->initialString() << (stateReloadInProgress_ ? "(state reloading)" : "") << commandQueue_->count() << "pending";
 
