@@ -67,7 +67,7 @@ KUrl findExecutable(const QString& name)
 
 QString findSourceFile(const QString& name)
 {
-    QFileInfo info(QFileInfo(__FILE__).dir().path() + '/' + name);
+    QFileInfo info(QFileInfo(__FILE__).dir().absoluteFilePath(name));
     Q_ASSERT(info.exists());
     return info.canonicalFilePath();
 }
@@ -159,6 +159,7 @@ public:
     {
         qRegisterMetaType<KUrl>("KUrl");
         
+        setTesting(true);
         KDevelop::ICore::self()->debugController()->addSession(this);
     }
     

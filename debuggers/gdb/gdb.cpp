@@ -59,7 +59,7 @@ GDB::~GDB()
     }
 }
 
-void GDB::start(KConfigGroup& config)
+void GDB::start(KConfigGroup& config, const QStringList& extraArguments)
 {
     // FIXME: verify that default value leads to something sensible
     KUrl gdbUrl = config.readEntry(GDBDebugger::gdbPathEntry, KUrl());
@@ -82,7 +82,7 @@ void GDB::start(KConfigGroup& config)
             SLOT(processErrored(QProcess::ProcessError)));
 
 
-    QStringList arguments;
+    QStringList arguments = extraArguments;
     arguments << "--interpreter=mi2" << "-quiet";
 
     KUrl shell = config.readEntry(GDBDebugger::debuggerShellEntry, KUrl());
