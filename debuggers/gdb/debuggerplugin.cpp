@@ -137,7 +137,7 @@ private:
 
 CppDebuggerPlugin::CppDebuggerPlugin( QObject *parent, const QVariantList & ) :
     KDevelop::IPlugin( CppDebuggerFactory::componentData(), parent ),
-    m_config(KGlobal::config(), "GDB Debugger"), m_session(0)
+    m_config(KGlobal::config(), "GDB Debugger")
 {
     KDEV_USE_EXTENSION_INTERFACE( KDevelop::IStatus )
     
@@ -301,16 +301,6 @@ KDevelop::ContextMenuExtension CppDebuggerPlugin::contextMenuExtension( KDevelop
         return menuExt;
 
     m_contextIdent = econtext->currentWord();
-
-    //bool running = m_session && m_session->isRunning();
-
-    // If debugger is running, we insert items at the top.
-    // The reason is user has explicitly run the debugger, so he's
-    // surely debugging, not editing code or something. So, first
-    // menu items should be about debugging, not some copy/paste/cut
-    // things.
-    //if (!running)
-        //popup->addSeparator();
 
     if (!m_contextIdent.isEmpty())
     {

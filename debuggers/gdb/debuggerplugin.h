@@ -142,7 +142,6 @@ private:
 
     KConfigGroup m_config;
 
-    DebugSession* m_session;
     DebuggerToolFactory< DisassembleWidget >* disassemblefactory;
     DebuggerToolFactory< GDBOutputWidget >* gdbfactory;
     DebuggerToolFactory< MemoryViewerWidget >* memoryviewerfactory;
