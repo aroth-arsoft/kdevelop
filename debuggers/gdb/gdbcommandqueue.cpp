@@ -89,8 +89,10 @@ void GDBDebugger::CommandQueue::removeObsoleteExecCommands(GDBCommand* command)
         QMutableListIterator<GDBCommand*> it = m_commandList;
         while (it.hasNext()) {
             GDBCommand* currentCmd = it.next();
-            if (currentCmd != command && currentCmd->type() >= ExecAbort && currentCmd->type() <= ExecUntil)
+            if (currentCmd != command && currentCmd->type() >= ExecAbort && currentCmd->type() <= ExecUntil) {
                 it.remove();
+                delete currentCmd;
+            }
         }
     }
 }
