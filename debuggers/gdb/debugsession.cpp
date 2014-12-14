@@ -68,7 +68,6 @@ DebugSession::DebugSession()
       justRestarted_(false),
       m_config(KGlobal::config(), "GDB Debugger"),
       m_testing(false),
->>>>>>> 8cf8574... gdb: DebugSession: add a testing mode for unit tests
       commandQueue_(new CommandQueue),
       m_tty(0),
       state_(s_dbgNotStarted|s_appNotStarted),
