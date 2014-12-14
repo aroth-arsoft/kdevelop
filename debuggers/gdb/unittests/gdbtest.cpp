@@ -82,7 +82,7 @@ static bool isAttachForbidden(const char * file, int line)
             return true;
         }
         if (canRun.read(1).toInt() != 0) {
-            QTest::qSkip("ptrace attaching not allowed, skipping test. To enable it, set /proc/sys/kernel/yama/ptrace_scope to 0.", file, line);
+            QTest::qSkip("ptrace attaching not allowed, skipping test. To enable it, set /proc/sys/kernel/yama/ptrace_scope to 0.", QTest::SkipSingle, file, line);
             return true;
         }
     }

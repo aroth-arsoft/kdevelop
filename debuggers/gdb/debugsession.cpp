@@ -38,6 +38,7 @@
 #include <KSharedConfig>
 #include <KStandardDirs>
 #include <KShell>
+#include <QtCore/QDir>
 
 #include <interfaces/idocument.h>
 #include <interfaces/icore.h>
@@ -918,6 +919,10 @@ bool DebugSession::startDebugger(KDevelop::ILaunchConfiguration* cfg)
 
     QString fileName = KStandardDirs::locate("data", "kdevgdb/printers/gdbinit");
     if (!fileName.isEmpty()) {
+        QFileInfo fileInfo(fileName);
+        QString quotedPrintersPath = fileInfo.dir().path().replace('\\', "\\\\").replace('"', "\\\"");
+        queueCmd(new GDBCommand(GDBMI::NonMI,
+            QString("python sys.path.insert(0, \"%0\")").arg(quotedPrintersPath)));
         queueCmd(new GDBCommand(GDBMI::NonMI, "source " + fileName));
     }
 
