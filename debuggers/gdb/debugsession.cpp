@@ -837,25 +837,6 @@ void DebugSession::programFinished(const QString& msg)
 }
 
 
-void DebugSession::parseStreamRecord(const GDBMI::StreamRecord& s)
-{
-    if (s.subkind == GDBMI::StreamRecord::Console)
-    {
-        QString line = s.message;
-        if (line.startsWith("Program terminated")) {
-            //when examining core file
-            setStateOff(s_appRunning);
-            setStateOn(s_appNotStarted|s_programExited);
-        } else if (line.startsWith("The program no longer exists")
-                   || line.startsWith("Program exited")) {
-            programNoApp(line);
-        } else if (!line.isEmpty() && line.at(0) == '[' && line.contains(QRegExp("^\\[Inferior \\d+ \\(.*process|target.*\\) exited .*\\]"))) {
-            m_inferiorExitCode = line;
-            addCommand(new CliCommand(GDBMI::NonMI, "info inferiors", this,  &DebugSession::lastInferiorHandler));
-        }
-    }
-}
-
 bool DebugSession::startDebugger(KDevelop::ILaunchConfiguration* cfg)
 {
     kDebug(9012) << "Starting debugger controller";
@@ -893,9 +874,6 @@ bool DebugSession::startDebugger(KDevelop::ILaunchConfiguration* cfg)
             this, SIGNAL(programStopped(GDBMI::ResultRecord)));
     connect(gdb, SIGNAL(programRunning()),
             this, SLOT(programRunning()));
-
-    connect(gdb, SIGNAL(streamRecord(GDBMI::StreamRecord)),
-            this, SLOT(parseStreamRecord(GDBMI::StreamRecord)));
 
     // Start gdb. Do this after connecting all signals so that initial
     // GDB output, and important events like "GDB died" are reported.
@@ -1478,22 +1456,6 @@ void DebugSession::handleTargetAttach(const GDBMI::ResultRecord& r)
             i18n("Startup error"));
         stopDebugger();
     }
-}
-
-void DebugSession::lastInferiorHandler(const QStringList& l)
-{
-    //* 1    <null>
-    QRegExp rx("^\\*?\\s+\\d+\\s+\\<null\\>\\s.*$");
-
-    for (int i = 2 ; i < l.size(); i++) {
-        if (!rx.exactMatch(l[i])) {
-            kDebug() << "Still running: " << l[i];
-            return;
-        }
-    }
-    kDebug() << "Exiting";
-    programNoApp(m_inferiorExitCode);
-    state_reload_needed = false;
 }
 
 }
