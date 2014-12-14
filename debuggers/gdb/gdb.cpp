@@ -44,7 +44,7 @@
 using namespace GDBDebugger;
 
 GDB::GDB(QObject* parent)
-: QObject(parent), process_(0), sawPrompt_(false), currentCmd_(0), receivedReply_(false), isRunning_(false), childPid_(0)
+: QObject(parent), process_(0), currentCmd_(0), isRunning_(false), childPid_(0)
 {
 }
 
@@ -132,7 +132,6 @@ void GDB::execute(GDBCommand* command)
     kDebug(9012) << "SEND:" << commandText;
     
     isRunning_ = false;
-    receivedReply_ = false;
 
     QByteArray commandUtf8 = commandText.toUtf8();
 
@@ -227,144 +226,140 @@ void GDB::processLine(const QByteArray& line)
         return;
     }
 
-   if (!sawPrompt_)
-   {
-       if (r->kind == GDBMI::Record::Stream)
-       {
-           GDBMI::StreamRecord& s = dynamic_cast<GDBMI::StreamRecord&>(*r);
-           emit userCommandOutput(s.message);
-       }
-       else if (r->kind == GDBMI::Record::Prompt)
-       {
-           sawPrompt_ = true;
-       }
-   }
-   else
-   {
-       
-       #ifndef DEBUG_NO_TRY
-       try
-       {
-       #endif
-           switch(r->kind)
-           {
-           case GDBMI::Record::Result: {
+    #ifndef DEBUG_NO_TRY
+    try
+    {
+    #endif
+        switch(r->kind)
+        {
+        case GDBMI::Record::Result: {
+            GDBMI::ResultRecord& result = static_cast<GDBMI::ResultRecord&>(*r);
 
-               GDBMI::ResultRecord& result = static_cast<GDBMI::ResultRecord&>(*r);
+            emit internalCommandOutput(QString::fromUtf8(line) + '\n');
 
-               emit internalCommandOutput(QString::fromUtf8(line) + '\n');
+            // GDB doc: "running" is a legacy status code that is equivalent to "done"
+            if (result.reason == "done" || result.reason == "running")
+            {
+                if (!currentCmd_) {
+                    kDebug(9012) << "Received a result without a pending command";
+                } else {
+                    Q_ASSERT(currentCmd_->token() == result.token);
+                    currentCmd_->invokeHandler(result);
+                }
+            }
+            else if (result.reason == "error")
+            {
+                kDebug(9012) << "Handling error";
+                // Some commands want to handle errors themself.
+                if (currentCmd_->handlesError() &&
+                    currentCmd_->invokeHandler(result))
+                {
+                    kDebug(9012) << "Invoked custom handler\n";
+                    // Done, nothing more needed
+                }
+                else
+                    emit error(result);
+            }
+            else
+            {
+                kDebug(9012) << "Unhandled result code: " << result.reason;
+            }
 
-               if (result.reason == "thread-group-started") {
-                   receivedReply_ = true;
-                   //     (gdb) -exec-run
-                   //     =thread-group-started,id="i1",pid="16768"
-                   if (line.contains("pid=\"")) {
-                       QList<QByteArray> splitLine = line.split(',');
-                       if (splitLine.size() > 2) {
-                           QByteArray pidStr = splitLine[2];
-                           pidStr.chop(1);
-                           childPid_ = pidStr.mid(5).toULong();
-                           if (childPid_ == 0) {
-                               kDebug() << "line=" << line << "pidStr=" << pidStr << pidStr.mid(5) << "pid=" << childPid_;
-                           }
-                       }
-                   }
-               }
+            delete currentCmd_;
+            currentCmd_ = nullptr;
+            emit ready();
+            break;
+        }
 
-               // FIXME: the code below should be reviewed to consider result record
-               // subtype when doing all decisions.
-               
-               if (result.subkind == GDBMI::ResultRecord::GeneralNotification)
-               {
-                   kDebug(9012) << "General notification";
-                   emit notification(result);
-                   return;
-               }
-               
-               if (result.reason == "stopped")
-               {
-                   //stopped is *not* a reply, wait for ^running or ^done (running before stopped, done after stopped)
-                   isRunning_ = false;
-                   emit programStopped(result);
-               }
-               else if (result.reason == "running")
-               {
-                   receivedReply_ = true;
-                   isRunning_ = true;
-                   emit programRunning();
-               }
-               else
-               {
-                   receivedReply_ = true;
-               }
+        case GDBMI::Record::Async: {
+            GDBMI::AsyncRecord& async = dynamic_cast<GDBMI::AsyncRecord&>(*r);
 
-               if (result.reason == "done")
-               {
-                   currentCmd_->invokeHandler(result);
-                   emit resultRecord(result);
-               }
-               else if (result.reason == "error")
-               {
-                   kDebug(9012) << "Handling error";
-                   // Some commands want to handle errors themself.
-                   if (currentCmd_->handlesError() &&
-                       currentCmd_->invokeHandler(result))
-                   {
-                       kDebug(9012) << "Invoked custom handler\n";
-                       // Done, nothing more needed
-                   }
-                   else
-                       emit error(result);
-               }
+            switch (async.subkind) {
+            case GDBMI::AsyncRecord::Exec: {
+                // Prefix '*'; asynchronous state changes of the target
+                if (async.reason == "stopped")
+                {
+                    isRunning_ = false;
+                    emit programStopped(async);
+                }
+                else if (async.reason == "running")
+                {
+                    isRunning_ = true;
+                    emit programRunning();
+                }
+                else
+                {
+                    kDebug(9012) << "Unhandled exec notification: " << async.reason;
+                }
+                break;
+            }
 
-               break;
-           }
+            case GDBMI::AsyncRecord::Notify: {
+                // Prefix '='; supplementary information that we should handle (new breakpoint etc.)
+                processNotification(async);
+                break;
+            }
 
-           case GDBMI::Record::Stream: {
+            case GDBMI::AsyncRecord::Status: {
+                // Prefix '+'; GDB documentation:
+                // On-going status information about progress of a slow operation; may be ignored
+                break;
+            }
 
-               GDBMI::StreamRecord& s = dynamic_cast<GDBMI::StreamRecord&>(*r);
+            default:
+                Q_ASSERT(false);
+            }
+            break;
+        }
 
-               if (s.reason == '@')
-                   emit applicationOutput(s.message);
+        case GDBMI::Record::Stream: {
 
-               if (currentCmd_->isUserCommand())
-                   emit userCommandOutput(s.message);
-               else
-                   emit internalCommandOutput(s.message);
+            GDBMI::StreamRecord& s = dynamic_cast<GDBMI::StreamRecord&>(*r);
 
-               currentCmd_->newOutput(s.message);
+            if (s.reason == '@')
+                emit applicationOutput(s.message);
 
-               emit streamRecord(s);
+            if (currentCmd_->isUserCommand())
+                emit userCommandOutput(s.message);
+            else
+                emit internalCommandOutput(s.message);
 
-               break;
-           }
-           case GDBMI::Record::Prompt:
-               break;
-           }
-       #ifndef DEBUG_NO_TRY
-       }
-       catch(const std::exception& e)
-       {
-           KMessageBox::detailedSorry(
-               qApp->activeWindow(),
-               i18nc("<b>Internal debugger error</b>",
-                     "<p>The debugger component encountered internal error while "
-                     "processing reply from gdb. Please submit a bug report."),
-               i18n("The exception is: %1\n"
-                    "The MI response is: %2", e.what(),
-                    QString::fromLatin1(line)),
-               i18n("Internal debugger error"));
-            isRunning_ = false;
-            receivedReply_ = true;
-       }
-       #endif
+            currentCmd_->newOutput(s.message);
 
-       if (receivedReply_ && !isRunning_)
-       {
-           delete currentCmd_;
-           currentCmd_ = 0;
-           emit ready();
-       }
+            emit streamRecord(s);
+
+            break;
+        }
+
+        case GDBMI::Record::Prompt:
+            break;
+        }
+    #ifndef DEBUG_NO_TRY
+    }
+    catch(const std::exception& e)
+    {
+        KMessageBox::detailedSorry(
+            qApp->activeWindow(),
+            i18nc("<b>Internal debugger error</b>",
+                    "<p>The debugger component encountered internal error while "
+                    "processing reply from gdb. Please submit a bug report."),
+            i18n("The exception is: %1\n"
+                "The MI response is: %2", e.what(),
+                QString::fromLatin1(line)),
+            i18n("Internal debugger error"));
+        isRunning_ = false;
+    }
+    #endif
+}
+
+void GDB::processNotification(const GDBMI::AsyncRecord & async)
+{
+    if (async.reason == "thread-group-started") {
+        //     (gdb) -exec-run
+        //     =thread-group-started,id="i1",pid="16768"
+        childPid_ = async["pid"].toInt();
+    } else {
+        kDebug(9012) << "Unhandled notification: " << async.reason;
     }
 }
 

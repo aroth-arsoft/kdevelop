@@ -525,7 +525,7 @@ void BreakpointController::update(KDevelop::Breakpoint *breakpoint, const GDBMI:
     m_dontSendChanges--;
 }
 
-void BreakpointController::programStopped(const GDBMI::ResultRecord& r)
+void BreakpointController::programStopped(const GDBMI::AsyncRecord& r)
 {
     QString reason;
     if (r.hasField("reason")) {
