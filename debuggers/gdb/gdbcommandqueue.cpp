@@ -79,7 +79,6 @@ void CommandQueue::rationalizeQueue(GDBCommand* command)
       // ... and stack list updates
       removeStackListUpdates();
     }
-    removeDuplicates(command);
 }
 
 void GDBDebugger::CommandQueue::removeObsoleteExecCommands(GDBCommand* command)
@@ -91,23 +90,6 @@ void GDBDebugger::CommandQueue::removeObsoleteExecCommands(GDBCommand* command)
         while (it.hasNext()) {
             GDBCommand* currentCmd = it.next();
             if (currentCmd != command && currentCmd->type() >= ExecAbort && currentCmd->type() <= ExecUntil) {
-                it.remove();
-                delete currentCmd;
-            }
-        }
-    }
-}
-
-void GDBDebugger::CommandQueue::removeDuplicates(GDBCommand* command)
-{
-    QMutableListIterator<GDBCommand*> it = m_commandList;
-
-    while (it.hasNext()) {
-        GDBCommand* currentCmd = it.next();
-        CommandType type = currentCmd->type();
-        if (command != currentCmd && type == command->type() && command->initialString() == currentCmd->initialString()) {
-            if( (command->frame() == -1 || command->frame() == currentCmd->frame()) &&
-                (command->thread() == -1 || command->thread() == currentCmd->thread()) ) {
                 it.remove();
                 delete currentCmd;
             }
