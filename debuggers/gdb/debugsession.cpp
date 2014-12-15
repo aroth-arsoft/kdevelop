@@ -28,6 +28,7 @@
 #include <typeinfo>
 
 #include <QtCore/QFileInfo>
+#include <QtCore/QDir>
 #include <QtGui/QApplication>
 #include <QRegExp>
 
@@ -38,7 +39,6 @@
 #include <KSharedConfig>
 #include <KStandardDirs>
 #include <KShell>
-#include <QtCore/QDir>
 
 #include <interfaces/idocument.h>
 #include <interfaces/icore.h>
@@ -865,13 +865,13 @@ bool DebugSession::startDebugger(KDevelop::ILaunchConfiguration* cfg)
 
     connect(gdb, SIGNAL(ready()), this, SLOT(gdbReady()));
     connect(gdb, SIGNAL(gdbExited()), this, SLOT(gdbExited()));
-    connect(gdb, SIGNAL(programStopped(GDBMI::ResultRecord)),
-            this, SLOT(slotProgramStopped(GDBMI::ResultRecord)));
-    connect(gdb, SIGNAL(programStopped(GDBMI::ResultRecord)),
-            this, SIGNAL(programStopped(GDBMI::ResultRecord)));
+    connect(gdb, SIGNAL(programStopped(GDBMI::AsyncRecord)),
+            this, SLOT(slotProgramStopped(GDBMI::AsyncRecord)));
+    connect(gdb, SIGNAL(programStopped(GDBMI::AsyncRecord)),
+            this, SIGNAL(programStopped(GDBMI::AsyncRecord)));
     connect(gdb, SIGNAL(programRunning()),
             this, SLOT(programRunning()));
-    connect(gdb, SIGNAL(notification()),
+    connect(gdb, SIGNAL(notification(GDBMI::AsyncRecord)),
             this, SLOT(processNotification(GDBMI::AsyncRecord)));
 
     // Start gdb. Do this after connecting all signals so that initial

@@ -148,7 +148,7 @@ BreakpointController::BreakpointController(DebugSession* parent)
     // a base class that does this connect.
     connect(debugSession(),     SIGNAL(event(IDebugSession::event_t)),
             this,       SLOT(slotEvent(IDebugSession::event_t)));
-    connect(parent, SIGNAL(programStopped(GDBMI::ResultRecord)), SLOT(programStopped(GDBMI::ResultRecord)));
+    connect(parent, SIGNAL(programStopped(GDBMI::AsyncRecord)), SLOT(programStopped(GDBMI::AsyncRecord)));
 }
 
 DebugSession *BreakpointController::debugSession() const

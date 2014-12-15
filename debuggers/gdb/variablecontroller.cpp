@@ -41,7 +41,7 @@ VariableController::VariableController(DebugSession* parent)
     : KDevelop::IVariableController(parent)
 {
     Q_ASSERT(parent);
-    connect(parent, SIGNAL(programStopped(GDBMI::ResultRecord)), SLOT(programStopped(GDBMI::ResultRecord)));
+    connect(parent, SIGNAL(programStopped(GDBMI::AsyncRecord)), SLOT(programStopped(GDBMI::AsyncRecord)));
     connect(parent, SIGNAL(stateChanged(KDevelop::IDebugSession::DebuggerState)), SLOT(stateChanged(KDevelop::IDebugSession::DebuggerState)));
 }
 
