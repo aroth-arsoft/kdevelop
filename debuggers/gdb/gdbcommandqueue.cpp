@@ -14,6 +14,7 @@
 // *   (at your option) any later version.                                  *
 // *                                                                        *
 // **************************************************************************
+
 #include <kdebug.h>
 
 #include "gdbcommandqueue.h"
@@ -33,7 +34,7 @@ CommandQueue::~CommandQueue()
     qDeleteAll(m_commandList);
 }
 
-void GDBDebugger::CommandQueue::enqueue(GDBCommand * command, QueuePosition insertPosition)
+void GDBDebugger::CommandQueue::enqueue(GDBCommand* command, QueuePosition insertPosition)
 {
     switch (insertPosition) {
         case QueueAtFront:
@@ -53,7 +54,7 @@ void GDBDebugger::CommandQueue::enqueue(GDBCommand * command, QueuePosition inse
         }
     }
     // take the time when this command was added to the command queue
-    command->enqueued();
+    command->markAsEnqueued();
 
     rationalizeQueue(command);
     dumpQueue();
@@ -69,7 +70,7 @@ void CommandQueue::dumpQueue()
     }
 }
 
-void CommandQueue::rationalizeQueue(GDBCommand * command)
+void CommandQueue::rationalizeQueue(GDBCommand* command)
 {
     if (command->type() >= ExecAbort && command->type() <= ExecUntil) {
       removeObsoleteExecCommands(command);
@@ -158,7 +159,7 @@ bool GDBDebugger::CommandQueue::isEmpty() const
     return m_commandList.isEmpty();
 }
 
-GDBCommand * GDBDebugger::CommandQueue::nextCommand()
+GDBCommand* GDBDebugger::CommandQueue::nextCommand()
 {
     if (!m_commandList.isEmpty())
         return m_commandList.takeAt(0);

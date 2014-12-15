@@ -148,24 +148,24 @@ public:
 
     bool stateReloading() const;
 
-    // Called when the command has been enqueued in the debug session
-    // and the command is wait for being submitted to GDB.
-    void enqueued();
+    /// Called when the command has been enqueued in the debug session
+    /// and the command is wait for being submitted to GDB.
+    void markAsEnqueued();
 
-    // Called when the command has been submitted to GDB and the command
-    // waits for completion by GDB.
-    void submitted();
+    /// Called when the command has been submitted to GDB and the command
+    /// waits for completion by GDB.
+    void markAsSubmitted();
 
-    // Called when the command has been completed and the response has arrived.
-    void completed();
+    /// Called when the command has been completed and the response has arrived.
+    void markAsCompleted();
 
-    // returns the amount of time (in ms) passed between submission and completion.
+    /// returns the amount of time (in ms) passed between submission and completion.
     qint64 gdbProcessingTime() const;
 
-    // returns the amount of time (in ms) passed between enqueuing and submission.
+    /// returns the amount of time (in ms) passed between enqueuing and submission.
     qint64 queueTime() const;
 
-    // returns the amount of time (in ms) passed between enqueuing and completion.
+    /// returns the amount of time (in ms) passed between enqueuing and completion.
     qint64 totalProcessingTime() const;
 
 private:
@@ -190,9 +190,9 @@ private:
     // - was added to the command queue (enqueued)
     // - was submitted to GDB
     // - was completed; response from GDB arrived
-    qint64 enqueueTimestamp_;
-    qint64 submitTimestamp_;
-    qint64 completeTimestamp_;
+    qint64 m_enqueueTimestamp;
+    qint64 m_submitTimestamp;
+    qint64 m_completeTimestamp;
 };
 
 class UserCommand : public GDBCommand

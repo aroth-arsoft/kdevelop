@@ -136,7 +136,7 @@ private Q_SLOTS:
     void currentSessionChanged(KDevelop::IDebugSession* session);
     void jumpToCursor();
     void runToCursor();
-    void setDisassemblyFlavor(QAction * action);
+    void setDisassemblyFlavor(QAction* action);
 
 protected:
     virtual void showEvent(QShowEvent*);
@@ -166,9 +166,9 @@ private:
     unsigned long    upper_;
     unsigned long    address_;
 
-    RegistersManager* m_registersManager ;
+    RegistersManager* m_registersManager;
 
-    DisassembleWindow * m_disassembleWindow;
+    DisassembleWindow* m_disassembleWindow;
     
     static const KIcon icon_;
     SelectAddrDialog* m_dlg;
