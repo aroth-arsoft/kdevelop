@@ -298,17 +298,19 @@ void GdbTest::testBreakpoint()
     TestLaunchConfiguration cfg;
 
     KDevelop::Breakpoint * b = breakpoints()->addCodeBreakpoint(debugeeFileName, 28);
-    QCOMPARE(session->breakpointController()->breakpointState(b), KDevelop::Breakpoint::NotStartedState);
+    QCOMPARE(b->state(), KDevelop::Breakpoint::NotStartedState);
 
     session->startProgram(&cfg, m_iface);
     WAIT_FOR_STATE(session, DebugSession::PausedState);
-    QCOMPARE(session->breakpointController()->breakpointState(b), KDevelop::Breakpoint::CleanState);
+    QCOMPARE(b->state(), KDevelop::Breakpoint::CleanState);
     session->stepInto();
     WAIT_FOR_STATE(session, DebugSession::PausedState);
     session->stepInto();
     WAIT_FOR_STATE(session, DebugSession::PausedState);
     session->run();
     WAIT_FOR_STATE(session, DebugSession::EndedState);
+
+    QCOMPARE(b->state(), KDevelop::Breakpoint::NotStartedState);
 }
 
 void GdbTest::testDisableBreakpoint()
@@ -423,11 +425,11 @@ void GdbTest::testPendingBreakpoint()
     breakpoints()->addCodeBreakpoint(debugeeFileName, 28);
 
     KDevelop::Breakpoint * b = breakpoints()->addCodeBreakpoint(findSourceFile("/gdbtest.cpp"), 10);
-    QCOMPARE(session->breakpointController()->breakpointState(b), KDevelop::Breakpoint::NotStartedState);
+    QCOMPARE(b->state(), KDevelop::Breakpoint::NotStartedState);
 
     session->startProgram(&cfg, m_iface);
     WAIT_FOR_STATE(session, DebugSession::PausedState);
-    QCOMPARE(session->breakpointController()->breakpointState(b), KDevelop::Breakpoint::PendingState);
+    QCOMPARE(b->state(), KDevelop::Breakpoint::PendingState);
     session->run();
     WAIT_FOR_STATE(session, DebugSession::EndedState);
 }
@@ -1649,7 +1651,7 @@ void GdbTest::testBreakpointWithSpaceInPath()
     QString fileName = findSourceFile("debugee space.cpp");
 
     KDevelop::Breakpoint * b = breakpoints()->addCodeBreakpoint(fileName, 20);
-    QCOMPARE(session->breakpointController()->breakpointState(b), KDevelop::Breakpoint::NotStartedState);
+    QCOMPARE(b->state(), KDevelop::Breakpoint::NotStartedState);
 
     session->startProgram(&cfg, m_iface);
     WAIT_FOR_STATE_AND_IDLE(session, DebugSession::PausedState);
@@ -1913,7 +1915,7 @@ void GdbTest::testDebugInExternalTerminal()
 
         session->startProgram(&cfg, m_iface);
         WAIT_FOR_STATE_AND_IDLE(session, DebugSession::PausedState);
-        QCOMPARE(session->breakpointController()->breakpointState(b), KDevelop::Breakpoint::CleanState);
+        QCOMPARE(b->state(), KDevelop::Breakpoint::CleanState);
         session->stepInto();
         WAIT_FOR_STATE(session, DebugSession::PausedState);
         session->run();
