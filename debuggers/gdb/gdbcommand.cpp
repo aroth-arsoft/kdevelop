@@ -14,6 +14,7 @@
  ***************************************************************************/
 
 #include "gdbcommand.h"
+#include <QtCore/QDateTime>
 
 using namespace GDBMI;
 
@@ -22,19 +23,22 @@ namespace GDBDebugger
 
 GDBCommand::GDBCommand(GDBMI::CommandType type, const QString &command)
 : type_(type), token_(0), command_(command), handler_method(0), commandHandler_(0),
-  stateReloading_(false), handlesError_(false), m_thread(-1), m_frame(-1)
+  stateReloading_(false), handlesError_(false), m_thread(-1), m_frame(-1),
+  m_enqueueTimestamp(0), m_submitTimestamp(0), m_completeTimestamp(0)
 {
 }
 
 GDBCommand::GDBCommand(GDBMI::CommandType type, int index)
 : type_(type), token_(0), command_(QString::number(index)), handler_method(0), commandHandler_(0),
-  stateReloading_(false), handlesError_(false), m_thread(-1), m_frame(-1)
+  stateReloading_(false), handlesError_(false), m_thread(-1), m_frame(-1),
+  m_enqueueTimestamp(0), m_submitTimestamp(0), m_completeTimestamp(0)
 {
 }
 
 GDBCommand::GDBCommand(CommandType type, const QString& arguments, GDBCommandHandler* handler)
 : type_(type), token_(0), command_(arguments), handler_method(0), commandHandler_(handler),
-  stateReloading_(false), m_thread(-1), m_frame(-1)
+  stateReloading_(false), m_thread(-1), m_frame(-1),
+  m_enqueueTimestamp(0), m_submitTimestamp(0), m_completeTimestamp(0)
 {
     handlesError_ = handler->handlesError();
 }
@@ -599,5 +603,34 @@ bool GDBCommand::stateReloading() const
     return stateReloading_;
 }
 
+void GDBCommand::markAsEnqueued()
+{
+    m_enqueueTimestamp = QDateTime::currentMSecsSinceEpoch();
+}
+
+void GDBCommand::markAsSubmitted()
+{
+    m_submitTimestamp = QDateTime::currentMSecsSinceEpoch();
+}
+
+void GDBCommand::markAsCompleted()
+{
+    m_completeTimestamp = QDateTime::currentMSecsSinceEpoch();
+}
+
+qint64 GDBCommand::gdbProcessingTime() const
+{
+    return m_completeTimestamp - m_submitTimestamp;
+}
+
+qint64 GDBCommand::queueTime() const
+{
+    return m_submitTimestamp - m_enqueueTimestamp;
+}
+
+qint64 GDBCommand::totalProcessingTime() const
+{
+    return m_completeTimestamp - m_enqueueTimestamp;
+}
 
 }

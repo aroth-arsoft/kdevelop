@@ -136,6 +136,7 @@ void GDB::execute(GDBCommand* command)
     QByteArray commandUtf8 = commandText.toUtf8();
 
     process_->write(commandUtf8, commandUtf8.length());
+    command->markAsSubmitted();
 
     QString prettyCmd = currentCmd_->cmdToSend();
     prettyCmd.remove( QRegExp("set prompt \032.\n") );
@@ -237,12 +238,16 @@ void GDB::processLine(const QByteArray& line)
                     kDebug(9012) << "Received a result without a pending command";
                 } else {
                     Q_ASSERT(currentCmd_->token() == result.token);
+                    currentCmd_->markAsCompleted();
+                    kDebug(9012) << "Command successful, times" << currentCmd_->totalProcessingTime() << currentCmd_->queueTime() << currentCmd_->gdbProcessingTime();
                     currentCmd_->invokeHandler(result);
                 }
             }
             else if (result.reason == "error")
             {
                 kDebug(9012) << "Handling error";
+                currentCmd_->markAsCompleted();
+                kDebug(9012) << "Command error, times" << currentCmd_->totalProcessingTime() << currentCmd_->queueTime() << currentCmd_->gdbProcessingTime();
                 // Some commands want to handle errors themself.
                 if (currentCmd_->handlesError() &&
                     currentCmd_->invokeHandler(result))

@@ -15,6 +15,8 @@
 // *                                                                        *
 // **************************************************************************
 
+#include <kdebug.h>
+
 #include "gdbcommandqueue.h"
 
 #include "mi/gdbmi.h"
@@ -33,7 +35,7 @@ CommandQueue::~CommandQueue()
     qDeleteAll(m_commandList);
 }
 
-void GDBDebugger::CommandQueue::enqueue(GDBCommand * command, QueuePosition insertPosition)
+void GDBDebugger::CommandQueue::enqueue(GDBCommand* command, QueuePosition insertPosition)
 {
     ++m_tokenCounter;
     if (m_tokenCounter == 0)
@@ -48,15 +50,48 @@ void GDBDebugger::CommandQueue::enqueue(GDBCommand * command, QueuePosition inse
             m_commandList.append(command);
             break;
     }
+    // take the time when this command was added to the command queue
+    command->markAsEnqueued();
 
     rationalizeQueue(command);
+    dumpQueue();
 }
 
-void CommandQueue::rationalizeQueue(GDBCommand * command)
+void CommandQueue::dumpQueue()
 {
-    if (command->type() >= ExecAbort && command->type() <= ExecUntil)
+    kDebug(9012) << "Pending commands" << m_commandList.count();
+    unsigned commandNum = 0;
+    foreach(const GDBCommand* command, m_commandList) {
+        kDebug(9012) << "Command" << commandNum << command->initialString();
+        ++commandNum;
+    }
+}
+
+void CommandQueue::rationalizeQueue(GDBCommand* command)
+{
+    if (command->type() >= ExecAbort && command->type() <= ExecUntil) {
+      removeObsoleteExecCommands(command);
       // Changing execution location, abort any variable updates
       removeVariableUpdates();
+      // ... and stack list updates
+      removeStackListUpdates();
+    }
+}
+
+void GDBDebugger::CommandQueue::removeObsoleteExecCommands(GDBCommand* command)
+{
+    if(command->type() == ExecContinue || command->type() == ExecUntil)
+    {
+        // Remove all exec commands up the latest ExecContinue or ExecUntil
+        QMutableListIterator<GDBCommand*> it = m_commandList;
+        while (it.hasNext()) {
+            GDBCommand* currentCmd = it.next();
+            if (currentCmd != command && currentCmd->type() >= ExecAbort && currentCmd->type() <= ExecUntil) {
+                it.remove();
+                delete currentCmd;
+            }
+        }
+    }
 }
 
 void GDBDebugger::CommandQueue::removeVariableUpdates()
@@ -64,9 +99,26 @@ void GDBDebugger::CommandQueue::removeVariableUpdates()
     QMutableListIterator<GDBCommand*> it = m_commandList;
 
     while (it.hasNext()) {
-        CommandType type = it.next()->type();
-        if ((type >= VarEvaluateExpression && type <= VarListChildren) || type == VarUpdate)
+        GDBCommand* command = it.next();
+        CommandType type = command->type();
+        if ((type >= VarEvaluateExpression && type <= VarListChildren) || type == VarUpdate) {
             it.remove();
+            delete command;
+        }
+    }
+}
+
+void GDBDebugger::CommandQueue::removeStackListUpdates()
+{
+    QMutableListIterator<GDBCommand*> it = m_commandList;
+
+    while (it.hasNext()) {
+        GDBCommand* command = it.next();
+        CommandType type = command->type();
+        if (type >= StackListArguments && type <= StackListLocals) {
+            it.remove();
+            delete command;
+        }
     }
 }
 
@@ -86,7 +138,7 @@ bool GDBDebugger::CommandQueue::isEmpty() const
     return m_commandList.isEmpty();
 }
 
-GDBCommand * GDBDebugger::CommandQueue::nextCommand()
+GDBCommand* GDBDebugger::CommandQueue::nextCommand()
 {
     if (!m_commandList.isEmpty())
         return m_commandList.takeAt(0);
