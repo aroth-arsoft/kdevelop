@@ -153,7 +153,7 @@ namespace GDBDebugger
     void MemoryView::initWidget()
     {
         QVBoxLayout *l = new QVBoxLayout(this);
-        l->setContentsMargins(0,0,0,0);
+        l->setContentsMargins(0, 0, 0, 0);
 
         khexedit2_widget = KHE::createBytesEditWidget(this);
         if (!khexedit2_widget)
@@ -241,9 +241,7 @@ namespace GDBDebugger
         if(amount.isEmpty())
             amount = QString("sizeof(%1)").arg(rangeSelector_->startAddressLineEdit->text());
 
-        session->addCommand(new ExpressionValueCommand(
-                amount,
-                this, &MemoryView::sizeComputed));
+        session->addCommand(new ExpressionValueCommand(amount, this, &MemoryView::sizeComputed));
     }
 
     void MemoryView::sizeComputed(const QString& size)
@@ -468,8 +466,7 @@ namespace GDBDebugger
     {
         bool app_started = !(debuggerState_ & s_appNotStarted);
 
-        bool enabled_ = app_started &&
-            !rangeSelector_->startAddressLineEdit->text().isEmpty();
+        bool enabled_ = app_started && !rangeSelector_->startAddressLineEdit->text().isEmpty();
 
         rangeSelector_->okButton->setEnabled(enabled_);
     }
