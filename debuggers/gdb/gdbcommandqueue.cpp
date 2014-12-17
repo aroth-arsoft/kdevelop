@@ -83,8 +83,7 @@ void CommandQueue::rationalizeQueue(GDBCommand* command)
 
 void GDBDebugger::CommandQueue::removeObsoleteExecCommands(GDBCommand* command)
 {
-    if(command->type() == ExecContinue || command->type() == ExecUntil)
-    {
+    if (command->type() == ExecContinue || command->type() == ExecUntil) {
         // Remove all exec commands up the latest ExecContinue or ExecUntil
         QMutableListIterator<GDBCommand*> it = m_commandList;
         while (it.hasNext()) {

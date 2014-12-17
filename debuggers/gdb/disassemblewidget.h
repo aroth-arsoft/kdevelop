@@ -167,9 +167,8 @@ private:
     unsigned long    address_;
 
     RegistersManager* m_registersManager;
-
     DisassembleWindow* m_disassembleWindow;
-    
+
     static const KIcon icon_;
     SelectAddrDialog* m_dlg;
 
