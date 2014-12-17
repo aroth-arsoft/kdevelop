@@ -1419,7 +1419,7 @@ void GdbTest::testPickupManuallyInsertedBreakpoint()
     KDevelop::Breakpoint *b = breakpoints()->breakpoint(1);
     QVERIFY(b);
     QCOMPARE(b->line(), 31); //we start with 0, gdb with 1
-    QCOMPARE(b->url().url(), QString("debugee.cpp"));
+    QCOMPARE(b->url().fileName(), QString("debugee.cpp"));
 }
 
 //Bug 270970
@@ -1447,12 +1447,12 @@ void GdbTest::testPickupManuallyInsertedBreakpointOnlyOnce()
     KDevelop::Breakpoint *b = breakpoints()->breakpoint(0);
     QVERIFY(b);
     QCOMPARE(b->line(), 31); //we start with 0, gdb with 1
-    QCOMPARE(b->url().url(), QString("debugee.cpp"));
+    QCOMPARE(b->url().fileName(), QString("debugee.cpp"));
 
     b = breakpoints()->breakpoint(1);
     QVERIFY(b);
     QCOMPARE(b->line(), 21);
-    QCOMPARE(b->url().url(), QString("debugee.cpp"));
+    QCOMPARE(b->url().fileName(), QString("debugee.cpp"));
 }
 
 void GdbTest::testRunGdbScript()
@@ -1932,11 +1932,11 @@ void GdbTest::testPathWithSpace()
     auto debugee = findExecutable("path with space/spacedebugee");
     TestLaunchConfiguration c(debugee, debugee.upUrl());
     KDevelop::Breakpoint* b = breakpoints()->addCodeBreakpoint("spacedebugee.cpp:30");
-    QCOMPARE(session->breakpointController()->breakpointState(b), KDevelop::Breakpoint::NotStartedState);
+    QCOMPARE(b->state(), KDevelop::Breakpoint::NotStartedState);
     session->startProgram(&c, m_iface);
 
     WAIT_FOR_STATE(session, DebugSession::PausedState);
-    QCOMPARE(session->breakpointController()->breakpointState(b), KDevelop::Breakpoint::CleanState);
+    QCOMPARE(b->state(), KDevelop::Breakpoint::CleanState);
     session->run();
     WAIT_FOR_STATE(session, DebugSession::EndedState);
 #endif

@@ -57,10 +57,21 @@ QString unquoteExpression(QString expr)
 struct Handler : public GDBCommandHandler
 {
     Handler(BreakpointController *c, KDevelop::Breakpoint *b)
-        : controller(c), breakpoint(b) {}
+        : controller(c)
+        , breakpointIndex(c->breakpointModel()->breakpointIndex(b, 0))
+    {
+    }
+
+    Breakpoint * breakpoint()
+    {
+        if (breakpointIndex.isValid()) {
+            return controller->breakpointModel()->breakpoint(breakpointIndex.row());
+        }
+        return nullptr;
+    }
 
     BreakpointController *controller;
-    KDevelop::Breakpoint *breakpoint;
+    QPersistentModelIndex breakpointIndex;
 };
 
 struct UpdateHandler : public Handler
@@ -70,6 +81,10 @@ struct UpdateHandler : public Handler
 
     void handle(const GDBMI::ResultRecord &r)
     {
+        Breakpoint * breakpoint = this->breakpoint();
+        if (!breakpoint)
+            return;
+
         if (r.reason == "error") {
             controller->error(breakpoint, r["msg"].literal(), m_column);
             kWarning() << r["msg"].literal();
@@ -92,39 +107,55 @@ struct InsertedHandler : public Handler
 
     virtual void handle(const GDBMI::ResultRecord &r)
     {
-        kDebug() << controller->m_dirty[breakpoint];
+        Breakpoint * breakpoint = this->breakpoint();
 
         if (r.reason == "error") {
-            controller->error(breakpoint, r["msg"].literal(), KDevelop::Breakpoint::LocationColumn);
-            kWarning() << r["msg"].literal();
-        } else {
-            controller->m_errors[breakpoint].remove(KDevelop::Breakpoint::LocationColumn);
-            if (r.hasField("bkpt")) {
-                controller->update(breakpoint, r["bkpt"]);
-            } else if (r.hasField("wpt")) {
-                // For watchpoint creation, GDB basically does not say
-                // anything.  Just record id.
-                controller->m_ids[breakpoint] = r["wpt"]["number"].literal();
-            } else if (r.hasField("hw-rwpt")) {
-                controller->m_ids[breakpoint] = r["hw-rwpt"]["number"].literal();
-            } else if (r.hasField("hw-awpt")) {
-                controller->m_ids[breakpoint] = r["hw-awpt"]["number"].literal();
+            if (breakpoint) {
+                controller->error(breakpoint, r["msg"].literal(), KDevelop::Breakpoint::LocationColumn);
+                kWarning() << r["msg"].literal();
             }
-            Q_ASSERT(!controller->m_ids[breakpoint].isEmpty());
-            kDebug() << "breakpoint id" << breakpoint << controller->m_ids[breakpoint];
+        } else {
+            QString id;
+
+            for (auto kind : {"bkpt", "wpt", "hw-rwpt", "hw-awpt"}) {
+                if (r.hasField(kind)) {
+                    id = r[kind]["number"].literal();
+                    break;
+                }
+            }
+            Q_ASSERT(!id.isEmpty());
+
+            if (breakpoint) {
+                controller->m_errors[breakpoint].remove(KDevelop::Breakpoint::LocationColumn);
+                controller->m_ids[breakpoint] = id;
+                if (r.hasField("bkpt")) {
+                    controller->update(breakpoint, r["bkpt"]);
+                }
+                kDebug() << "breakpoint id" << breakpoint << controller->m_ids[breakpoint];
+            } else {
+                // breakpoint was deleted while insertion was in flight
+                controller->debugSession()->addCommandToFront(
+                    new GDBCommand(BreakDelete, id));
+            }
         }
-        controller->m_dirty[breakpoint].remove(KDevelop::Breakpoint::LocationColumn);
-        controller->breakpointStateChanged(breakpoint);
-        controller->sendMaybe(breakpoint);
+
+        if (breakpoint) {
+            controller->m_dirty[breakpoint].remove(KDevelop::Breakpoint::LocationColumn);
+            controller->breakpointStateChanged(breakpoint);
+            controller->sendMaybe(breakpoint);
+        }
     }
 
     virtual bool handlesError() { return true; }
 };
 
-struct DeletedHandler : public Handler
+struct DeletedHandler : public GDBCommandHandler
 {
     DeletedHandler(BreakpointController *c, KDevelop::Breakpoint *b)
-        : Handler(c, b) {}
+        : controller(c)
+        , breakpoint(b)
+    {
+    }
 
     void handle(const GDBMI::ResultRecord &r)
     {
@@ -137,6 +168,9 @@ struct DeletedHandler : public Handler
             delete breakpoint;
         }
     }
+
+    BreakpointController * controller;
+    Breakpoint * breakpoint;
 };
 
 
@@ -300,13 +334,16 @@ void BreakpointController::sendMaybe(KDevelop::Breakpoint* breakpoint)
         kDebug() << "deleted";
         m_dirty.remove(breakpoint);
         m_errors.remove(breakpoint);
-        if (m_ids.contains(breakpoint)) { //if id is 0 breakpoint insertion is still pending, InsertedHandler will call sendMaybe again and delete it
+        if (m_ids.contains(breakpoint)) {
             kDebug() << "breakpoint id" << m_ids[breakpoint];
             if (!m_ids[breakpoint].isEmpty()) {
                 debugSession()->addCommandToFront(
                     new GDBCommand(BreakDelete, m_ids[breakpoint],
                                 new DeletedHandler(this, breakpoint)));
                 addedCommand = true;
+            } else {
+                kDebug() << "insertion is still in flight, just delete it";
+                delete breakpoint;
             }
         } else {
             kDebug() << "breakpoint doesn't have yet an id, just delete it";
@@ -459,41 +496,36 @@ void BreakpointController::handleBreakpointList(const GDBMI::ResultRecord &r)
 void BreakpointController::update(KDevelop::Breakpoint *breakpoint, const GDBMI::Value &b)
 {
     m_dontSendChanges++;
-    
+
     m_ids[breakpoint] = b["number"].literal();
 
-    if (b.hasField("original-location")) {
-        if (breakpoint->address().isEmpty()) {
-            /* If the address is not empty, it means that the breakpoint
-               is set by KDevelop, not by the user, and that we want to
-               show the original expression, not the address, in the table.
-               TODO: this also means that if used added a watchpoint in gdb
-               like "watch foo", then we'll show it in the breakpoint table
-               just fine, but after KDevelop restart, we'll try to add the
-               breakpoint using basically "watch *&(foo)".  I'm not sure if
-               that's a problem or not.  */
-            QString location = b["original-location"].literal();
-            kDebug() << "location" << location;
-            if (breakpoint->kind() == KDevelop::Breakpoint::CodeBreakpoint) {
-                QRegExp rx("^(.+):(\\d+)$");
-                if (rx.indexIn(location) != -1) {
-                    breakpoint->setLocation(KUrl(unquoteExpression(rx.cap(1))), rx.cap(2).toInt()-1);
-                } else {
-                    //for regular expression breakpoints and not only...
-                    if(b.hasField("fullname") && b.hasField("line")){
-                        breakpoint->setLocation(KUrl(unquoteExpression(b["fullname"].literal())), b["line"].toInt()-1);
-                    }else{
-                        breakpoint->setData(KDevelop::Breakpoint::LocationColumn, unquoteExpression(location));
-                    }
-                }
-            } else {
-                breakpoint->setData(KDevelop::Breakpoint::LocationColumn, unquoteExpression(location));
-            }
+    /* If the address is not empty, it means that the breakpoint
+        is set by KDevelop, not by the user, and that we want to
+        show the original expression, not the address, in the table.
+        TODO: this also means that if used added a watchpoint in gdb
+        like "watch foo", then we'll show it in the breakpoint table
+        just fine, but after KDevelop restart, we'll try to add the
+        breakpoint using basically "watch *&(foo)".  I'm not sure if
+        that's a problem or not.  */
+    const bool emptyAddress = breakpoint->address().isEmpty();
+    const bool isCodeBreakpoint = breakpoint->kind() == KDevelop::Breakpoint::CodeBreakpoint;
+
+    if (emptyAddress && isCodeBreakpoint && b.hasField("fullname") && b.hasField("line")){
+        breakpoint->setLocation(QUrl::fromLocalFile(unquoteExpression(b["fullname"].literal())),
+                                b["line"].toInt()-1);
+    } else if (emptyAddress && isCodeBreakpoint && b.hasField("original-location")) {
+        QRegExp rx("^(.+):(\\d+)$");
+        QString location = b["original-location"].literal();
+        kDebug() << "location" << location;
+        if (rx.indexIn(location) != -1) {
+            breakpoint->setLocation(KUrl(unquoteExpression(rx.cap(1))), rx.cap(2).toInt()-1);
+        } else {
+            breakpoint->setData(KDevelop::Breakpoint::LocationColumn, unquoteExpression(location));
         }
     } else if (b.hasField("what") && b["what"].literal() == "exception throw") {
         breakpoint->setExpression("catch throw");
     } else {
-        kWarning() << "That's too bad, breakpoint doesn't contain \"original-location\" field ";
+        kWarning() << "Breakpoint doesn't contain required location/expression data: " << m_ids[breakpoint];
     }
 
     if (!m_dirty[breakpoint].contains(KDevelop::Breakpoint::ConditionColumn)
