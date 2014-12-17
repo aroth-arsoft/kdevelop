@@ -131,7 +131,7 @@ struct InsertedHandler : public Handler
                 if (r.hasField("bkpt")) {
                     controller->update(breakpoint, r["bkpt"]);
                 }
-                qCDebug(DEBUGGERGDB) << "breakpoint id" << breakpoint << controller->m_ids[breakpoint];
+                kDebug() << "breakpoint id" << breakpoint << controller->m_ids[breakpoint];
             } else {
                 // breakpoint was deleted while insertion was in flight
                 controller->debugSession()->addCommandToFront(
@@ -499,8 +499,6 @@ void BreakpointController::update(KDevelop::Breakpoint *breakpoint, const GDBMI:
 
     m_ids[breakpoint] = b["number"].literal();
 
-    if (b.hasField("original-location")) {
-        if (breakpoint->address().isEmpty()) {
     /* If the address is not empty, it means that the breakpoint
         is set by KDevelop, not by the user, and that we want to
         show the original expression, not the address, in the table.
@@ -527,7 +525,7 @@ void BreakpointController::update(KDevelop::Breakpoint *breakpoint, const GDBMI:
     } else if (b.hasField("what") && b["what"].literal() == "exception throw") {
         breakpoint->setExpression("catch throw");
     } else {
-        kWarning() << "That's too bad, breakpoint doesn't contain \"original-location\" field ";
+        kWarning() << "Breakpoint doesn't contain required location/expression data: " << m_ids[breakpoint];
     }
 
     if (!m_dirty[breakpoint].contains(KDevelop::Breakpoint::ConditionColumn)
