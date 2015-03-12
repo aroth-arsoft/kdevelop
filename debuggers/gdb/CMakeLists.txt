@@ -1,5 +1,7 @@
 project(gdb)
 
+find_package(ZLIB)
+
 function(add_debuggable_executable target)
     cmake_parse_arguments(add_debuggable_executable "" "" "SRCS" ${ARGN})
     add_executable(${target} ${add_debuggable_executable_SRCS})
@@ -11,24 +13,6 @@ function(add_debuggable_executable target)
     endif()
     set_target_properties(${target} PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS_DEBUG} ${_flags}")
 endfunction()
-
-if(NOT APPLE)
-macro_optional_find_package( KDE4Workspace 4.2.0 )
-
-macro_log_feature( KDE4WORKSPACE_FOUND
-"KDE 4 Workspace" "KDE 4 Workspace libraries" "kdebase/workspace" FALSE
-"" "Required for building the process selection dialog for attaching GDB to a running process."
-)
-endif(NOT APPLE)
-
-if(KDE4WORKSPACE_FOUND)
-    include_directories(
-        ${KDE4WORKSPACE_INCLUDE_DIR}
-    )
-    add_definitions(
-        -DKDEV_ENABLE_GDB_ATTACH_DIALOG
-    )
-endif(KDE4WORKSPACE_FOUND)
 
 if (CMAKE_VERSION VERSION_GREATER "2.9" OR NOT CMAKE_GENERATOR MATCHES "Ninja")
     set(HAVE_PATH_WITH_SPACES_TEST TRUE)
@@ -44,6 +28,8 @@ add_definitions( -DKDE_DEFAULT_DEBUG_AREA=9012 )
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     )
+
+configure_file(config-ksysguard.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-ksysguard.h )
 
 #add_subdirectory(tests)
 
@@ -81,14 +67,18 @@ set(kdevgdb_PART_SRCS
     registers/registercontroller_arm.cpp
     registers/modelsmanager.cpp
     registers/converters.cpp
+    processselection.cpp
+    ksysguard/process.cpp
+    ksysguard/processes.cpp
+    ksysguard/ksysguardprocesslist.cpp
+    ksysguard/processes_atop_p.cpp
+    ksysguard/processes_base_p.cpp
+    ksysguard/processes_local_p.cpp
+    ksysguard/processes_remote_p.cpp
+    ksysguard/ProcessFilter.cpp
+    ksysguard/ProcessModel.cpp
+    ksysguard/ReniceDlg.cpp
 )
-
-if(KDE4WORKSPACE_FOUND)
-    set(kdevgdb_PART_SRCS
-        ${kdevgdb_PART_SRCS}
-        processselection.cpp
-    )
-endif(KDE4WORKSPACE_FOUND)
 
 set(kdevgdb_PART_UI
     debuggertracingdialog.ui
@@ -96,6 +86,8 @@ set(kdevgdb_PART_UI
     selectcore.ui
     selectaddress.ui
     registers/registersview.ui
+    ksysguard/ProcessWidgetUI.ui
+    ksysguard/ReniceDlgUi.ui
 )
 
 kde4_add_ui_files(kdevgdb_PART_SRCS ${kdevgdb_PART_UI})
@@ -110,6 +102,7 @@ target_link_libraries(kdevgdb ${KDEVPLATFORM_SUBLIME_LIBRARIES}
     ${KDEVPLATFORM_UTIL_LIBRARIES}
     ${KDE4_KTEXTEDITOR_LIBS}
     ${KDE4WORKSPACE_PROCESSUI_LIBS}
+    ${ZLIB_LIBRARY}
 )
 
 install(TARGETS kdevgdb DESTINATION ${PLUGIN_INSTALL_DIR})
@@ -144,19 +137,24 @@ set(gdbtest_PART_SRCS
     registers/registercontroller_arm.cpp
     registers/modelsmanager.cpp
     registers/converters.cpp
-)
-
-if(KDE4WORKSPACE_FOUND)
-    set(gdbtest_PART_SRCS
-        ${gdbtest_PART_SRCS}
-        processselection.cpp
+    ksysguard/process.cpp
+    ksysguard/processes.cpp
+    ksysguard/ksysguardprocesslist.cpp
+    ksysguard/processes_atop_p.cpp
+    ksysguard/processes_base_p.cpp
+    ksysguard/processes_local_p.cpp
+    ksysguard/processes_remote_p.cpp
+    ksysguard/ProcessFilter.cpp
+    ksysguard/ProcessModel.cpp
+    ksysguard/ReniceDlg.cpp
     )
-endif(KDE4WORKSPACE_FOUND)
 
 kde4_add_ui_files(gdbtest_PART_SRCS
     debuggertracingdialog.ui
     selectaddress.ui
     registers/registersview.ui
+    ksysguard/ProcessWidgetUI.ui
+    ksysguard/ReniceDlgUi.ui
 )
 kde4_add_unit_test(gdbtest ${gdbtest_PART_SRCS})
 target_link_libraries(gdbtest
@@ -171,6 +169,7 @@ target_link_libraries(gdbtest
     ${KDE4_KTEXTEDITOR_LIBS}
     ${KDE4_KPARTS_LIBRARY}
     ${KDE4WORKSPACE_PROCESSUI_LIBS}
+    ${ZLIB_LIBRARY}
 )
 
 if (HAVE_PATH_WITH_SPACES_TEST)

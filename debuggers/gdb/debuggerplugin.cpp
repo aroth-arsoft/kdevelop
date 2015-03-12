@@ -71,9 +71,7 @@
 #include <interfaces/launchconfigurationtype.h>
 
 #include "disassemblewidget.h"
-#ifdef KDEV_ENABLE_GDB_ATTACH_DIALOG
 #include "processselection.h"
-#endif
 #include "memviewdlg.h"
 #include "gdbparser.h"
 #include "gdboutputwidget.h"
@@ -371,7 +369,6 @@ void CppDebuggerPlugin::slotExamineCore()
     job->start();
 }
 
-#ifdef KDEV_ENABLE_GDB_ATTACH_DIALOG
 void CppDebuggerPlugin::slotAttachProcess()
 {
     emit showMessage(this, i18n("Choose a process to attach to..."), 1000);
@@ -387,7 +384,6 @@ void CppDebuggerPlugin::slotAttachProcess()
     else
         attachProcess(pid);
 }
-#endif
 
 void CppDebuggerPlugin::attachProcess(int pid)
 {
