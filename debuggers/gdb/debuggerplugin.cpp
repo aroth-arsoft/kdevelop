@@ -206,13 +206,11 @@ void CppDebuggerPlugin::setupActions()
     connect(action, SIGNAL(triggered(bool)), this, SLOT(slotExamineCore()));
     ac->addAction("debug_core", action);
 
-    #ifdef KDEV_ENABLE_GDB_ATTACH_DIALOG
     action = new KAction(KIcon("connect_creating"), i18n("Attach to Process"), this);
     action->setToolTip( i18n("Attach to process...") );
     action->setWhatsThis(i18n("<b>Attach to process</b><p>Attaches the debugger to a running process.</p>"));
     connect(action, SIGNAL(triggered(bool)), this, SLOT(slotAttachProcess()));
     ac->addAction("debug_attach", action);
-    #endif
 }
 
 void CppDebuggerPlugin::setupDBus()
