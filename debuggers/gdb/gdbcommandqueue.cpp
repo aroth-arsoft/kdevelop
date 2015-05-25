@@ -15,12 +15,11 @@
 // *                                                                        *
 // **************************************************************************
 
-#include <kdebug.h>
-
 #include "gdbcommandqueue.h"
 
 #include "mi/gdbmi.h"
 #include "gdbcommand.h"
+#include "debug.h"
 
 using namespace GDBDebugger;
 using namespace GDBMI;
@@ -56,10 +55,10 @@ void CommandQueue::enqueue(GDBCommand* command)
 
 void CommandQueue::dumpQueue()
 {
-    kDebug(9012) << "Pending commands" << m_commandList.count();
+    qCDebug(DEBUGGERGDB) << "Pending commands" << m_commandList.count();
     unsigned commandNum = 0;
     foreach(const GDBCommand* command, m_commandList) {
-        kDebug(9012) << "Command" << commandNum << command->initialString();
+        qCDebug(DEBUGGERGDB) << "Command" << commandNum << command->initialString();
         ++commandNum;
     }
 }
