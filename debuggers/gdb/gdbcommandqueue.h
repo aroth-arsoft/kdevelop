@@ -49,7 +49,10 @@ public:
 
 private:
     void rationalizeQueue(GDBCommand* command);
+    void removeObsoleteExecCommands(GDBCommand* command);
     void removeVariableUpdates();
+    void removeStackListUpdates();
+    void dumpQueue();
   
     QList<GDBCommand*> m_commandList;
     int m_immediatelyCounter = 0;

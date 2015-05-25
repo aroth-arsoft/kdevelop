@@ -14,6 +14,7 @@
  ***************************************************************************/
 
 #include "gdbcommand.h"
+#include <QDateTime>
 
 using namespace GDBMI;
 
@@ -610,6 +611,36 @@ void GDBCommand::setStateReloading(bool f)
 bool GDBCommand::stateReloading() const
 {
     return stateReloading_;
+}
+
+void GDBCommand::markAsEnqueued()
+{
+    m_enqueueTimestamp = QDateTime::currentMSecsSinceEpoch();
+}
+
+void GDBCommand::markAsSubmitted()
+{
+    m_submitTimestamp = QDateTime::currentMSecsSinceEpoch();
+}
+
+void GDBCommand::markAsCompleted()
+{
+    m_completeTimestamp = QDateTime::currentMSecsSinceEpoch();
+}
+
+qint64 GDBCommand::gdbProcessingTime() const
+{
+    return m_completeTimestamp - m_submitTimestamp;
+}
+
+qint64 GDBCommand::queueTime() const
+{
+    return m_submitTimestamp - m_enqueueTimestamp;
+}
+
+qint64 GDBCommand::totalProcessingTime() const
+{
+    return m_completeTimestamp - m_enqueueTimestamp;
 }
 
 }

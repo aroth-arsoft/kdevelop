@@ -542,7 +542,7 @@ void DebugSession::queueCmd(GDBCommand *cmd)
 
     commandQueue_->enqueue(cmd);
 
-    qCDebug(DEBUGGERGDB) << "QUEUE: " << cmd->initialString() << (stateReloadInProgress_ ? "(state reloading)" : "");
+    qCDebug(DEBUGGERGDB) << "QUEUE: " << cmd->initialString() << (stateReloadInProgress_ ? "(state reloading)" : "") << commandQueue_->count() << "pending";
 
     bool varCommandWithContext= (cmd->type() >= GDBMI::VarAssign
                                  && cmd->type() <= GDBMI::VarUpdate

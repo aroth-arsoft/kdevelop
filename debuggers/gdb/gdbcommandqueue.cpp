@@ -15,6 +15,8 @@
 // *                                                                        *
 // **************************************************************************
 
+#include <kdebug.h>
+
 #include "gdbcommandqueue.h"
 
 #include "mi/gdbmi.h"
@@ -40,19 +42,52 @@ void CommandQueue::enqueue(GDBCommand* command)
         m_tokenCounter = 1;
     command->setToken(m_tokenCounter);
 
+    // take the time when this command was added to the command queue
+    command->markAsEnqueued();
+
     m_commandList.append(command);
 
     if (command->flags() & (CmdImmediately | CmdInterrupt))
         ++m_immediatelyCounter;
 
     rationalizeQueue(command);
+    dumpQueue();
 }
 
-void CommandQueue::rationalizeQueue(GDBCommand * command)
+void CommandQueue::dumpQueue()
 {
-    if (command->type() >= ExecAbort && command->type() <= ExecUntil)
+    kDebug(9012) << "Pending commands" << m_commandList.count();
+    unsigned commandNum = 0;
+    foreach(const GDBCommand* command, m_commandList) {
+        kDebug(9012) << "Command" << commandNum << command->initialString();
+        ++commandNum;
+    }
+}
+
+void CommandQueue::rationalizeQueue(GDBCommand* command)
+{
+    if (command->type() >= ExecAbort && command->type() <= ExecUntil) {
+      removeObsoleteExecCommands(command);
       // Changing execution location, abort any variable updates
       removeVariableUpdates();
+      // ... and stack list updates
+      removeStackListUpdates();
+    }
+}
+
+void GDBDebugger::CommandQueue::removeObsoleteExecCommands(GDBCommand* command)
+{
+    if (command->type() == ExecContinue || command->type() == ExecUntil) {
+        // Remove all exec commands up the latest ExecContinue or ExecUntil
+        QMutableListIterator<GDBCommand*> it = m_commandList;
+        while (it.hasNext()) {
+            GDBCommand* currentCmd = it.next();
+            if (currentCmd != command && currentCmd->type() >= ExecAbort && currentCmd->type() <= ExecUntil) {
+                it.remove();
+                delete currentCmd;
+            }
+        }
+    }
 }
 
 void CommandQueue::removeVariableUpdates()
@@ -63,6 +98,22 @@ void CommandQueue::removeVariableUpdates()
         GDBCommand* command = it.next();
         CommandType type = command->type();
         if ((type >= VarEvaluateExpression && type <= VarListChildren) || type == VarUpdate) {
+            if (command->flags() & (CmdImmediately | CmdInterrupt))
+                --m_immediatelyCounter;
+            it.remove();
+            delete command;
+        }
+    }
+}
+
+void CommandQueue::removeStackListUpdates()
+{
+    QMutableListIterator<GDBCommand*> it = m_commandList;
+
+    while (it.hasNext()) {
+        GDBCommand* command = it.next();
+        CommandType type = command->type();
+        if (type >= StackListArguments && type <= StackListLocals) {
             if (command->flags() & (CmdImmediately | CmdInterrupt))
                 --m_immediatelyCounter;
             it.remove();
