@@ -128,10 +128,10 @@ public Q_SLOTS:
     void update(const QString &address);
     void jumpToCursor();
     void runToCursor();
+    void setDisassemblyFlavor(QAction* action);
 
 private Q_SLOTS:
     void currentSessionChanged(KDevelop::IDebugSession* session);
-    void setDisassemblyFlavor(QAction* action);
 
 protected:
     virtual void showEvent(QShowEvent*) override;

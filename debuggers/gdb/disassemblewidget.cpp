@@ -130,9 +130,8 @@ DisassembleWindow::DisassembleWindow(QWidget *parent, DisassembleWidget* widget)
     m_disassemblyFlavorActionGroup->setExclusive(true);
     m_disassemblyFlavorActionGroup->addAction(m_disassemblyFlavorAtt);
     m_disassemblyFlavorActionGroup->addAction(m_disassemblyFlavorIntel);
-
-    connect(m_disassemblyFlavorActionGroup, SIGNAL(triggered(QAction*)),
-            widget, SLOT(setDisassemblyFlavor(QAction*)));
+    connect(m_disassemblyFlavorActionGroup, &QActionGroup::triggered, widget, &DisassembleWidget::setDisassemblyFlavor);
+    
     }
 }
 
