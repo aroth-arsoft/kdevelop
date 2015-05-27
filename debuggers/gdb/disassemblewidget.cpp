@@ -496,10 +496,10 @@ void DisassembleWidget::setDisassemblyFlavor(QAction* action)
         // unknown flavor, do not build a GDB command
         break;
     case DisassemblyFlavorATT:
-        cmd = "disassembly-flavor att";
+        cmd = QStringLiteral("disassembly-flavor att");
         break;
     case DisassemblyFlavorIntel:
-        cmd = "disassembly-flavor intel";
+        cmd = QStringLiteral("disassembly-flavor intel");
         break;
     }
     qCDebug(DEBUGGERGDB) << "Disassemble widget set " << cmd;
@@ -526,7 +526,7 @@ void DisassembleWidget::updateDisassemblyFlavor()
     }
 
     s->addCommand(
-                new GDBCommand(GdbShow, "disassembly-flavor", this, &DisassembleWidget::showDisassemblyFlavorHandler));
+                new GDBCommand(GdbShow, QStringLiteral("disassembly-flavor"), this, &DisassembleWidget::showDisassemblyFlavorHandler));
 }
 
 void DisassembleWidget::showDisassemblyFlavorHandler(const GDBMI::ResultRecord& r)
