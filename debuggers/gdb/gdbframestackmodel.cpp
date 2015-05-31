@@ -71,11 +71,19 @@ void GdbFrameStackModel::handleThreadInfo(const GDBMI::ResultRecord& r)
         KDevelop::FrameStackModel::ThreadItem i;
         const GDBMI::Value & threadMI = threads[gidx];
         i.nr = threadMI["id"].toInt();
+        if(threadMI.hasField("name"))
+            i.name = threadMI["name"].literal();
+
+        QString frame;
         if (threadMI["state"].literal() == "stopped") {
-            i.name = getFunctionOrAddress(threads[gidx]["frame"]);
+            frame = getFunctionOrAddress(threads[gidx]["frame"]);
         } else {
-            i.name = i18n("(running)");
+            frame = i18n("(running)");
         }
+        if(i.name.isEmpty())
+            i.name = frame;
+        else
+            i.name += QChar(' ') + frame;
         threadsList << i;
     }
     setThreads(threadsList);
