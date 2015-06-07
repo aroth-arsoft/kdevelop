@@ -65,27 +65,13 @@ void CommandQueue::dumpQueue()
 
 void CommandQueue::rationalizeQueue(GDBCommand* command)
 {
-    if (command->type() >= ExecAbort && command->type() <= ExecUntil) {
-      removeObsoleteExecCommands(command);
+    if ((command->type() >= ExecAbort && command->type() <= ExecUntil) && 
+         command->type() != ExecArguments && 
+         command->type() != ExecShowArguments ) {
       // Changing execution location, abort any variable updates
       removeVariableUpdates();
       // ... and stack list updates
       removeStackListUpdates();
-    }
-}
-
-void GDBDebugger::CommandQueue::removeObsoleteExecCommands(GDBCommand* command)
-{
-    if (command->type() == ExecContinue || command->type() == ExecUntil) {
-        // Remove all exec commands up the latest ExecContinue or ExecUntil
-        QMutableListIterator<GDBCommand*> it = m_commandList;
-        while (it.hasNext()) {
-            GDBCommand* currentCmd = it.next();
-            if (currentCmd != command && currentCmd->type() >= ExecAbort && currentCmd->type() <= ExecUntil) {
-                it.remove();
-                delete currentCmd;
-            }
-        }
     }
 }
 
