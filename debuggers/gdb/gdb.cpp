@@ -45,6 +45,9 @@ using namespace GDBDebugger;
 
 GDB::GDB(QObject* parent)
 : QObject(parent), process_(0), currentCmd_(0), isRunning_(false)
+#if defined(Q_OS_MAC)
+, childPid_(0)
+#endif
 {
 }
 
@@ -157,7 +160,14 @@ void GDB::interrupt()
 {
     //TODO:win32 Porting needed
     int pid = process_->pid();
-    if (pid != 0) {
+
+    #if defined(Q_OS_MAC)
+    if (childPid_) {
+        pid = childPid_;
+    }
+    #endif
+
+    if (pid) {
         ::kill(pid, SIGINT);
     }
 }

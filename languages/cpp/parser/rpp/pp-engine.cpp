@@ -860,7 +860,7 @@ void pp::handle_if (Stream& input)
 {
   if (test_if_level())
   {
-    pp_macro_expander expand_condition(this);
+    pp_macro_expander expand_condition(this, 0, false, true);
     skip_blanks(input, devnull());
 
     Anchor inputPosition = input.inputPosition();
@@ -880,7 +880,7 @@ void pp::handle_if (Stream& input)
 
   } else {
     // Capture info for precompiled macros
-    pp_macro_expander expand_condition(this);
+    pp_macro_expander expand_condition(this, 0, false, true);
     skip_blanks(input, devnull());
     PreprocessedContents condition;
     {
@@ -933,7 +933,7 @@ void pp::handle_elif(Stream& input)
   }
   else
   {
-    pp_macro_expander expand_condition(this);
+    pp_macro_expander expand_condition(this, 0, false, true);
     skip_blanks(input, devnull());
 
     Anchor inputPosition = input.inputPosition();
@@ -1011,7 +1011,7 @@ void pp::handle_ifdef (bool check_undefined, Stream& input)
   {
     pp_macro* macro = m_environment->retrieveMacro(macro_name, true);
     bool value = false;
-    if( macro && macro->defined )
+    if( macro && macro->defined && !(macro->file == currentFileName() && macro->sourceLine > input.originalInputPosition().line))
       value = true;
 
     if (check_undefined)

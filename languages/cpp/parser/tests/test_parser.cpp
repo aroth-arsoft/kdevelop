@@ -540,6 +540,12 @@ void TestParser::testPreprocessor() {
   
   QCOMPARE(preprocess("#define NEXT_\\\nLINE SUCCESS\nNEXT_LINE").replace(QRegExp("[\n\t ]+"), ""), QString("SUCCESS"));
   QCOMPARE(preprocess("#define NEXT_LINE\\\n(x,y) fun(x,y)\nNEXT_LINE(x,y)").replace(QRegExp("[\n\t ]+"), ""), QString("fun(x,y)"));
+
+  QCOMPARE(preprocess("#if !defined A \n#define A B\n#endif\nA\n").trimmed(), QString("B"));
+  QCOMPARE(preprocess("#define A\n#if defined(A)\n#undef A\n#define A defined\n#else\n#define A ndefined\n#endif\nA\n").simplified(), QString("defined"));
+
+  QEXPECT_FAIL("", "No problems reported for mispaired brackets", Continue);
+  QCOMPARE(preprocess("#if 1) \n#endif\n").trimmed(), QString("*ERROR*"));
 }
 
 void TestParser::testPreprocessorStringify() {
