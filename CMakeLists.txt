@@ -1,7 +1,7 @@
 # KDevelop version
 set( KDEVELOP_VERSION_MAJOR 4 )
 set( KDEVELOP_VERSION_MINOR 7 )
-set( KDEVELOP_VERSION_PATCH 2 )
+set( KDEVELOP_VERSION_PATCH 3 )
 # KDevplatform dependency version
 set( KDEVPLATFORM_VERSION "1.${KDEVELOP_VERSION_MINOR}.${KDEVELOP_VERSION_PATCH}" )
 
@@ -50,6 +50,7 @@ endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # in Qt 4, clang support is lacking...
+    add_definitions("-Wno-inconsistent-missing-override -Wno-macro-redefined")
     add_definitions("-DQ_COMPILER_INITIALIZER_LISTS=1")
 endif()
 
